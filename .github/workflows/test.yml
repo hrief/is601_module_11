@@ -7,9 +7,11 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    env:
+      TEST_DATABASE_URL: postgresql://user:password@localhost:5432/myappdb
     services:
       postgres:
-        image: postgres:latest
+        image: postgres:16
         env:
           POSTGRES_USER: user
           POSTGRES_PASSWORD: password
@@ -17,7 +19,7 @@ jobs:
         ports:
           - 5432:5432
         options: >-
-          --health-cmd pg_isready
+          --health-cmd "pg_isready -h 127.0.0.1 -U user -d myappdb"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
@@ -40,13 +42,11 @@ jobs:
           python -m venv venv
           source venv/bin/activate
           pip install -r requirements.txt
-          playwright install
+          python -m playwright install --with-deps chromium
       - name: Run tests
         run: |
           source venv/bin/activate
-          pytest tests/unit/ --cov=src --junitxml=test-results/junit.xml
-          pytest tests/integration/
-          pytest tests/e2e/
+          python -m pytest --junitxml=test-results/junit.xml
   security:
     needs: test
     runs-on: ubuntu-latest
@@ -83,8 +83,8 @@ jobs:
         with:
           push: true
           tags: |
-            kaw393939/601_module9:latest
-            kaw393939/601_module9:${{ github.sha }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/${{ vars.DOCKERHUB_REPOSITORY || 'is601_module_11' }}:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/${{ vars.DOCKERHUB_REPOSITORY || 'is601_module_11' }}:${{ github.sha }}
           platforms: linux/amd64,linux/arm64
-          cache-from: type=registry,ref=kaw393939/601_module9:cache
+          cache-from: type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/${{ vars.DOCKERHUB_REPOSITORY || 'is601_module_11' }}:latest
           cache-to: type=inline,mode=max

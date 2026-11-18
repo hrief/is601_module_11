@@ -1,5 +1,47 @@
 # 📦 Project Setup
 
+## Module 11 calculation tests
+
+`CalculationCreate(a=12, b=3, type="Divide")` validates a request.
+`Calculation.from_create(data, user_id=owner.id)` uses the existing factory
+to create the ORM instance. Its `a` and `b` attributes map to the first two
+values of the existing JSON `inputs` column. `CalculationRead.model_validate(record)`
+computes the result from the stored operands when serializing the record.
+
+Install dependencies and run the calculation unit tests:
+
+```bash
+python -m pip install -r requirements.txt
+python -m pytest tests/unit/test_calculation_create.py
+```
+
+Start a disposable PostgreSQL container for the integration tests:
+
+```bash
+docker run --rm -d --name module11-test-db -p 127.0.0.1:5432:5432 -e POSTGRES_USER=user -e POSTGRES_PASSWORD=password -e POSTGRES_DB=myappdb postgres:16
+docker exec module11-test-db pg_isready -h 127.0.0.1 -U user -d myappdb
+```
+
+Once PostgreSQL accepts connections, set the database URL and run the suite:
+
+```powershell
+$env:TEST_DATABASE_URL = "postgresql://user:password@localhost:5432/myappdb"
+python -m playwright install chromium
+python -m pytest
+docker stop module11-test-db
+```
+
+In Bash, set the same URL with `export TEST_DATABASE_URL=postgresql://user:password@localhost:5432/myappdb`.
+Use `python -m pytest tests/integration/test_calculation_postgres.py` to run just
+the PostgreSQL tests. These tests create and remove an isolated schema.
+
+GitHub Actions runs the full suite with PostgreSQL and publishes the image from
+`main` after tests and the image scan pass. Configure the `DOCKERHUB_USERNAME`
+and `DOCKERHUB_TOKEN` secrets in the repository or its `production` environment.
+The optional `DOCKERHUB_REPOSITORY` variable defaults to `is601_module_11`.
+
+[GitHub repository](https://github.com/hrief/is601_module_11) · [Intended Docker Hub repository](https://hub.docker.com/r/hrief/is601_module_11) · [Existing-file changes](MODULE11_CHANGES.md)
+
 ---
 
 # 🧩 1. Install Homebrew (Mac Only)

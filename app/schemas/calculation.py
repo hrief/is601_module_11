@@ -17,10 +17,13 @@ Design Pattern: Data Transfer Objects (DTOs)
 These schemas act as DTOs, defining contracts between API and clients.
 """
 
+from collections.abc import Mapping
 from enum import Enum
 from pydantic import (
+    AliasChoices,
     BaseModel,
     Field,
+    FiniteFloat,
     ConfigDict,
     model_validator,
     field_validator
@@ -91,12 +94,20 @@ class CalculationBase(BaseModel):
             ValueError: If the type is not a valid calculation type
         """
         allowed = {e.value for e in CalculationType}
-        # Ensure v is a string and check (in lowercase) if it's allowed.
-        if not isinstance(v, str) or v.lower() not in allowed:
+        aliases = {
+            "add": "addition",
+            "sub": "subtraction",
+            "multiply": "multiplication",
+            "divide": "division",
+        }
+        if isinstance(v, str):
+            v = v.lower()
+            v = aliases.get(v, v)
+        if not isinstance(v, str) or v not in allowed:
             raise ValueError(
                 f"Type must be one of: {', '.join(sorted(allowed))}"
             )
-        return v.lower()
+        return v
 
     @field_validator("inputs", mode="before")
     @classmethod
@@ -164,30 +175,65 @@ class CalculationBase(BaseModel):
 
 
 class CalculationCreate(CalculationBase):
-    """
-    Schema for creating a new Calculation.
-    
-    This schema is used when a client wants to create a calculation.
-    It includes the user_id to associate the calculation with a user.
-    
-    In a real application, the user_id would typically come from the
-    authenticated user's session rather than the request body.
-    """
-    user_id: UUID = Field(
-        ...,
-        description="UUID of the user who owns this calculation",
-        examples=["123e4567-e89b-12d3-a456-426614174000"]
-    )
+    """Validate two operands and retain compatibility with list-based callers."""
+
+    a: FiniteFloat
+    b: FiniteFloat
+    inputs: List[FiniteFloat] = Field(default_factory=list, min_length=2)
+    user_id: Optional[UUID] = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def normalize_operands(cls, data):
+        if not isinstance(data, Mapping):
+            return data
+        data = dict(data)
+        if "inputs" in data:
+            if "a" not in data and "b" not in data and data.get("user_id") is None:
+                raise ValueError("user_id is required with inputs")
+            inputs = data["inputs"]
+            if isinstance(inputs, list) and len(inputs) >= 2:
+                data.setdefault("a", inputs[0])
+                data.setdefault("b", inputs[1])
+        elif "a" in data and "b" in data:
+            data["inputs"] = [data["a"], data["b"]]
+        return data
+
+    @field_validator("a", "b", mode="before")
+    @classmethod
+    def reject_boolean_operands(cls, value):
+        if isinstance(value, bool):
+            raise ValueError("Operands must be numbers")
+        return value
+
+    @model_validator(mode="after")
+    def check_operand_consistency(self) -> "CalculationCreate":
+        if self.inputs[:2] != [self.a, self.b]:
+            raise ValueError("a and b must match the first two inputs")
+        return self
 
     model_config = ConfigDict(
         json_schema_extra={
             "example": {
-                "type": "addition",
-                "inputs": [10.5, 3, 2],
-                "user_id": "123e4567-e89b-12d3-a456-426614174000"
+                "type": "Add",
+                "a": 10.5,
+                "b": 3
             }
         }
     )
+
+
+class CalculationRead(BaseModel):
+    """Serialize the stored operands and compute the result when read."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    user_id: UUID
+    a: FiniteFloat
+    b: FiniteFloat
+    type: CalculationType
+    result: FiniteFloat = Field(validation_alias=AliasChoices("computed_result", "result"))
 
 
 class CalculationUpdate(BaseModel):

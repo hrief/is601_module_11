@@ -22,12 +22,17 @@ This design pattern allows for:
 """
 
 from datetime import datetime
+from math import isfinite
 import uuid
-from typing import List
+from typing import TYPE_CHECKING, List
 from sqlalchemy import Column, String, DateTime, ForeignKey, JSON, Float
 from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import relationship, declared_attr
 from app.database import Base
+
+if TYPE_CHECKING:
+    from app.schemas.calculation import CalculationCreate
 
 
 class AbstractCalculation:
@@ -227,6 +232,36 @@ class Calculation(Base, AbstractCalculation):
         "polymorphic_on": "type",
         "polymorphic_identity": "calculation",
     }
+
+    @hybrid_property
+    def a(self):
+        return self.inputs[0]
+
+    @a.expression
+    def a(cls):
+        return cls.inputs[0].as_float()
+
+    @hybrid_property
+    def b(self):
+        return self.inputs[1]
+
+    @b.expression
+    def b(cls):
+        return cls.inputs[1].as_float()
+
+    @property
+    def computed_result(self) -> float:
+        return self.get_result()
+
+    @classmethod
+    def from_create(
+        cls, data: "CalculationCreate", *, user_id: uuid.UUID
+    ) -> "Calculation":
+        """Create a calculation for the caller-supplied owner."""
+        calculation = cls.create(data.type.value, user_id, list(data.inputs))
+        if not isfinite(calculation.computed_result):
+            raise ValueError("Calculation result must be finite")
+        return calculation
 
 
 class Addition(Calculation):
