@@ -8,5 +8,7 @@
 | `.github/workflows/test.yml` | Connects the test job to PostgreSQL 16, runs the full suite with Chromium and app coverage, and publishes the existing Docker tags to the configured Docker Hub account and repository after the existing image scan passes. |
 | `tests/conftest.py` | Starts the existing browser-test server with the interpreter running pytest so it can import the same installed dependencies. |
 | `tests/e2e/test_e2e.py` | Uses Playwright's retrying text assertions for both calculation responses, which render after an asynchronous request. |
-| `requirements.txt` | Pins urllib3 to 2.8.0, the first release that fixes CVE-2026-97689. |
+| `requirements.txt` | Pins patched urllib3, AnyIO, certifi, h11 and Starlette versions. Updates FastAPI, httpcore and their supporting pins for compatibility. |
+| `Dockerfile` | Applies Debian security updates, installs binary wheels without compiler or development packages, and updates setuptools. Checks dependency compatibility and removes pip and its vendored code from the runtime image. |
+| `main.py` | Uses Starlette's request-first template response API for the calculator homepage. |
 | `README.md` | Adds calculation usage, local test commands, repository links, and Docker Hub configuration. |
