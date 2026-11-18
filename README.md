@@ -1,5 +1,18 @@
 # 📦 Project Setup
 
+## Running locally
+
+From the repository root, with Python 3.10+ and an active virtual environment:
+
+```bash
+python -m pip install -r requirements.txt
+python main.py
+```
+
+Open [the calculator](http://127.0.0.1:8000/). The calculator page runs without a database.
+
+[Docker Hub repository](https://hub.docker.com/repository/docker/holden988/is601_module_11/general)
+
 ## Module 11 calculation tests
 
 `CalculationCreate(a=12, b=3, type="Divide")` validates a request.
@@ -40,7 +53,7 @@ GitHub Actions runs the full suite with PostgreSQL and publishes the image from
 and `DOCKERHUB_TOKEN` secrets in the repository or its `production` environment.
 The optional `DOCKERHUB_REPOSITORY` variable defaults to `is601_module_11`.
 
-[GitHub repository](https://github.com/hrief/is601_module_11) · [Intended Docker Hub repository](https://hub.docker.com/r/hrief/is601_module_11) · [Existing-file changes](MODULE11_CHANGES.md)
+[GitHub repository](https://github.com/hrief/is601_module_11)
 
 ---
 
@@ -240,19 +253,7 @@ docker run -it --rm <image-name>
 
 # 🚀 6. Running the Project
 
-- **Without Docker**:
-
-```bash
-python main.py
-```
-
-(or update this if the main script is different.)
-
-- **With Docker**:
-
-```bash
-docker run -it --rm <image-name>
-```
+See [Run locally](#run-locally) for the startup commands and Docker Hub link.
 
 ---
 
